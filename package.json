@@ -1,0 +1,17 @@
+{
+  "name": "brightmind",
+  "version": "1.0.0",
+  "main": "handler.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "nostr-tools": "^2.12.0",
+    "openai": "^4.91.1",
+    "pg": "^8.14.1"
+  }
+}
