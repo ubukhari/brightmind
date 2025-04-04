@@ -1,6 +1,6 @@
 const { updateUserBalance, markUserWarned } = require('./db')
 
-const MINIMUM_BALANCE_SATS = 60 // Msg when user goes below this
+const MINIMUM_BALANCE_SATS = 60 // Msg when user balance goes below this
 const MODULE_COSTS = {
   gratitude: 10,
   reframe: 20,
