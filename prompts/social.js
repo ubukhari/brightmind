@@ -8,12 +8,15 @@ const TEMPLATE = "The user described a social interaction: {input}. Summarize wh
 
 async function handle(user, message = null) {
   if (!message || message.trim().toLowerCase() === '/social') {
+    console.log(`📨 Sending default social prompt to user ${user.id}`)
     return DEFAULT_PROMPT
   }
 
-  const response = message.trim().slice(0, 1000)
+  const response = message.trim()
   const prompt = DEFAULT_PROMPT
   let aiResponse = null
+
+  console.log(`👥 Social interaction input from user ${user.id}:`, response)
 
   const reflection = await getReflection({
     user,
@@ -23,9 +26,11 @@ async function handle(user, message = null) {
   })
 
   if (reflection.error === 'insufficient_balance') {
+    console.warn(`⚠️ Not enough sats for user ${user.id} on social module.`)
     aiResponse = null
   } else {
     aiResponse = reflection.aiText
+    console.log(`🤖 GPT response for social insight:`, aiResponse)
   }
 
   await createEntry({
@@ -40,11 +45,8 @@ async function handle(user, message = null) {
   await updateLastPromptSent(user.id)
 
   return aiResponse
-    ? `👥 Connection insight:\n\n${aiResponse}`
+    ? `👥 Connection insight:\n${aiResponse}`
     : `🤝 Got it. Reflecting helps. Zap ⚡ to get ideas on nurturing your relationships.`
 }
 
 module.exports = { handle }
-
-
-

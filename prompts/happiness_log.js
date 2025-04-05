@@ -8,12 +8,15 @@ const TEMPLATE = "The user described a happy or positive moment: {input}. Identi
 
 async function handle(user, message = null) {
   if (!message || message.trim().toLowerCase() === '/happiness') {
+    console.log(`📨 Sending default happiness_log prompt to user ${user.id}`)
     return DEFAULT_PROMPT
   }
 
-  const response = message.trim().slice(0, 1000)
+  const response = message.trim()
   const prompt = DEFAULT_PROMPT
   let aiResponse = null
+
+  console.log(`😊 Happiness Log input from user ${user.id}:`, response)
 
   const reflection = await getReflection({
     user,
@@ -23,9 +26,11 @@ async function handle(user, message = null) {
   })
 
   if (reflection.error === 'insufficient_balance') {
+    console.warn(`⚠️ Not enough sats for user ${user.id} on happiness_log module.`)
     aiResponse = null
   } else {
     aiResponse = reflection.aiText
+    console.log(`🤖 Happiness Log GPT response:`, aiResponse)
   }
 
   await createEntry({
@@ -40,11 +45,8 @@ async function handle(user, message = null) {
   await updateLastPromptSent(user.id)
 
   return aiResponse
-    ? `😊 Here's what might be fueling your happiness:\n\n${aiResponse}`
+    ? `😊 Here's what might be fueling your happiness:\n${aiResponse}`
     : `💡 Great moment. Zap ⚡ next time for an insight on how to build more like it.`
 }
 
 module.exports = { handle }
-
-
-

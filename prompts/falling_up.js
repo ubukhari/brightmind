@@ -8,12 +8,15 @@ const TEMPLATE = "The user described a recent challenge: {input}. Identify a str
 
 async function handle(user, message = null) {
   if (!message || message.trim().toLowerCase() === '/fallingup') {
+    console.log(`📨 Sending default falling_up prompt to user ${user.id}`)
     return DEFAULT_PROMPT
   }
 
-  const response = message.trim().slice(0, 1000)
+  const response = message.trim()
   const prompt = DEFAULT_PROMPT
   let aiResponse = null
+
+  console.log(`📉 Falling Up input from user ${user.id}:`, response)
 
   const reflection = await getReflection({
     user,
@@ -23,9 +26,11 @@ async function handle(user, message = null) {
   })
 
   if (reflection.error === 'insufficient_balance') {
+    console.warn(`⚠️ Not enough sats for user ${user.id} on falling_up module.`)
     aiResponse = null
   } else {
     aiResponse = reflection.aiText
+    console.log(`🤖 GPT response for Falling Up:`, aiResponse)
   }
 
   await createEntry({
@@ -40,11 +45,8 @@ async function handle(user, message = null) {
   await updateLastPromptSent(user.id)
 
   return aiResponse
-    ? `🌱 Growth from adversity:\n\n${aiResponse}`
+    ? `🌱 Growth from adversity:\n${aiResponse}`
     : `📝 Noted. Reflecting is powerful. Zap ⚡ to get your personal growth plan next time.`
 }
 
 module.exports = { handle }
-
-
-

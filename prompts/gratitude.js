@@ -7,14 +7,16 @@ const DEFAULT_PROMPT = "Here’s today’s reflection: What are 3 good things th
 const TEMPLATE = "The user listed these gratitude items: {input}. Offer a gentle insight or theme you notice in their reflections."
 
 async function handle(user, message = null) {
-  // If no message content, send default prompt
   if (!message || message.trim().toLowerCase() === '/gratitude') {
+    console.log(`📨 Sending default gratitude prompt to user ${user.id}`)
     return DEFAULT_PROMPT
   }
 
-  const response = message.trim().slice(0, 1000) // prevent runaway token use
+  const response = message.trim()
   const prompt = DEFAULT_PROMPT
   let aiResponse = null
+
+  console.log(`📝 Logging gratitude reflection from user ${user.id}:`, response)
 
   const reflection = await getReflection({
     user,
@@ -24,9 +26,11 @@ async function handle(user, message = null) {
   })
 
   if (reflection.error === 'insufficient_balance') {
-    aiResponse = null // allow entry, no GPT
+    console.warn(`⚠️ Not enough sats for user ${user.id} on gratitude module.`)
+    aiResponse = null
   } else {
     aiResponse = reflection.aiText
+    console.log(`🤖 GPT responded with:`, aiResponse)
   }
 
   await createEntry({
@@ -41,11 +45,8 @@ async function handle(user, message = null) {
   await updateLastPromptSent(user.id)
 
   return aiResponse
-    ? `🧠 Here's something I noticed:\n\n${aiResponse}`
+    ? `🧠 Here's something I noticed:\n${aiResponse}`
     : `🙏 Got it. You're always welcome to reflect here. (Zap ⚡ to unlock deeper insights)`
 }
 
 module.exports = { handle }
-
-
-

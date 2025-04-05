@@ -1,13 +1,13 @@
-// gpt.js (with Assistants API)
 const { OpenAI } = require('openai')
 const { logGPTUsage, updateUserBalance, updateUserThread } = require('./db')
 const { getModuleCost } = require('./balance')
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 const DEFAULT_ASSISTANT_ID = process.env.DEFAULT_ASSISTANT_ID
 
 async function ensureThread(user) {
   if (!user.thread_id) {
+    console.log('🧵 No thread_id found. Creating new thread for user:', user.id)
     const thread = await openai.beta.threads.create()
     await updateUserThread(user.id, thread.id)
     return thread.id
@@ -17,10 +17,14 @@ async function ensureThread(user) {
 
 async function getReflection({ user, module, input, promptTemplate }) {
   const cost = await getModuleCost(module)
-  if (user.balance_sats < cost) return { error: 'insufficient_balance' }
+  if (user.balance_sats < cost) {
+    console.log('❌ Insufficient balance for module:', module)
+    return { error: 'insufficient_balance' }
+  }
 
   const assistantId = user.assistant_id || DEFAULT_ASSISTANT_ID
   const threadId = await ensureThread(user)
+  console.log(`🤖 Using Assistant ID: ${assistantId}, Thread ID: ${threadId}`)
 
   const context = []
   if (user.age) context.push(`The user is ${user.age} years old.`)
@@ -33,6 +37,8 @@ async function getReflection({ user, module, input, promptTemplate }) {
 
   const fullPrompt = context.length ? `${context.join(' ')}\n\n${prompt}` : prompt
 
+  console.log('📨 Sending prompt to Assistant:', fullPrompt)
+
   await openai.beta.threads.messages.create(threadId, {
     role: 'user',
     content: fullPrompt
@@ -42,18 +48,28 @@ async function getReflection({ user, module, input, promptTemplate }) {
     assistant_id: assistantId
   })
 
-  // Wait for run to complete (simple polling)
+  // Wait for run to complete
   let runStatus = run.status
   let result = null
+  let retries = 0
+
+  console.log('⏳ Waiting for run to complete...')
 
   while (runStatus === 'queued' || runStatus === 'in_progress') {
     await new Promise(res => setTimeout(res, 1000))
     const check = await openai.beta.threads.runs.retrieve(threadId, run.id)
     runStatus = check.status
+    retries++
+
     if (runStatus === 'completed') result = check
+    if (retries > 30) {
+      console.error('⏰ Run timed out after 30s.')
+      return { error: 'timeout' }
+    }
   }
 
   if (runStatus !== 'completed') {
+    console.error('❌ Assistant run failed with status:', runStatus)
     return { error: 'run_failed' }
   }
 
@@ -61,12 +77,14 @@ async function getReflection({ user, module, input, promptTemplate }) {
   const lastMessage = messages.data.find(m => m.role === 'assistant')
   const aiText = lastMessage?.content?.[0]?.text?.value || ''
 
+  console.log('✅ Assistant response received:', aiText)
+
   await updateUserBalance(user.id, user.balance_sats - cost)
   await logGPTUsage({
     userId: user.id,
     module,
     satsSpent: cost,
-    tokensUsed: null // Assistants doesn't always return token count yet
+    tokensUsed: null // Not returned reliably from Assistants yet
   })
 
   return { aiText }
@@ -75,6 +93,3 @@ async function getReflection({ user, module, input, promptTemplate }) {
 module.exports = {
   getReflection
 }
-
-
-

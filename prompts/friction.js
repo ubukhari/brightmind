@@ -8,12 +8,15 @@ const TEMPLATE = "The user described a friction point: {input}. Suggest one smal
 
 async function handle(user, message = null) {
   if (!message || message.trim().toLowerCase() === '/friction') {
+    console.log(`📨 Sending default friction prompt to user ${user.id}`)
     return DEFAULT_PROMPT
   }
 
-  const response = message.trim().slice(0, 1000)
+  const response = message.trim()
   const prompt = DEFAULT_PROMPT
   let aiResponse = null
+
+  console.log(`🛑 Friction input from user ${user.id}:`, response)
 
   const reflection = await getReflection({
     user,
@@ -23,9 +26,11 @@ async function handle(user, message = null) {
   })
 
   if (reflection.error === 'insufficient_balance') {
+    console.warn(`⚠️ Not enough sats for user ${user.id} on friction module.`)
     aiResponse = null
   } else {
     aiResponse = reflection.aiText
+    console.log(`🤖 GPT suggestion for friction fix:`, aiResponse)
   }
 
   await createEntry({
@@ -40,11 +45,8 @@ async function handle(user, message = null) {
   await updateLastPromptSent(user.id)
 
   return aiResponse
-    ? `⚙️ Friction fix idea:\n\n${aiResponse}`
+    ? `⚙️ Friction fix idea:\n${aiResponse}`
     : `🔍 Noted. Zap ⚡ to get simple ways to make good habits easier.`
 }
 
 module.exports = { handle }
-
-
-

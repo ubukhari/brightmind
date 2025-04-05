@@ -3,6 +3,7 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 
 // ✅ Users
 async function getOrCreateUser(pubkey) {
+  console.log('🔍 Checking or creating user for pubkey:', pubkey)
   const { rows } = await pool.query(
     'SELECT * FROM brightmind_users WHERE pubkey = $1', [pubkey]
   )
@@ -12,12 +13,13 @@ async function getOrCreateUser(pubkey) {
     `INSERT INTO brightmind_users (pubkey, balance_sats)
      VALUES ($1, $2)
      RETURNING *`,
-    [pubkey, 300] // start with 300 sats
+    [pubkey, 300]
   )
   return insert.rows[0]
 }
 
 async function updateUserBalance(userId, newBalance) {
+  console.log('💰 Updating user balance:', { userId, newBalance })
   await pool.query(
     'UPDATE brightmind_users SET balance_sats = $1 WHERE id = $2',
     [newBalance, userId]
@@ -25,21 +27,16 @@ async function updateUserBalance(userId, newBalance) {
 }
 
 async function updateLastPromptSent(userId) {
+  console.log('🕒 Updating last prompt sent for user:', userId)
   await pool.query(
     'UPDATE brightmind_users SET last_prompt_sent = CURRENT_DATE WHERE id = $1',
     [userId]
   )
 }
 
-async function markUserWarned(userId) {
-  await pool.query(
-    'UPDATE brightmind_users SET warned_recently = TRUE, warned_at = CURRENT_TIMESTAMP WHERE id = $1',
-    [userId]
-  )
-}
-
 // ✅ Entries
 async function createEntry({ userId, module, prompt, response, aiResponse = null, costSats = 0 }) {
+  console.log('📝 Creating entry:', { userId, module, costSats })
   await pool.query(
     `INSERT INTO brightmind_entries (user_id, module, prompt, response, ai_response, cost_sats)
      VALUES ($1, $2, $3, $4, $5, $6)`,
@@ -49,6 +46,7 @@ async function createEntry({ userId, module, prompt, response, aiResponse = null
 
 // ✅ Usage Logs
 async function logGPTUsage({ userId, module, satsSpent, tokensUsed }) {
+  console.log('📊 Logging GPT usage:', { userId, module, satsSpent, tokensUsed })
   await pool.query(
     `INSERT INTO brightmind_usage_logs (user_id, module, sats_spent, tokens_used)
      VALUES ($1, $2, $3, $4)`,
@@ -58,6 +56,7 @@ async function logGPTUsage({ userId, module, satsSpent, tokensUsed }) {
 
 // ✅ Zaps
 async function recordZap({ userId, amountSats, txId, zapNote }) {
+  console.log('⚡ Recording zap:', { userId, amountSats, txId })
   await pool.query(
     `INSERT INTO brightmind_zaps (user_id, amount_sats, tx_id, zap_note)
      VALUES ($1, $2, $3, $4)
@@ -72,6 +71,7 @@ async function recordZap({ userId, amountSats, txId, zapNote }) {
 
 // ✅ Insights
 async function storeWeeklyInsight({ userId, summary, weekStart, weekEnd }) {
+  console.log('📅 Storing weekly insight for user:', userId)
   await pool.query(
     `INSERT INTO brightmind_insights (user_id, summary, week_start, week_end)
      VALUES ($1, $2, $3, $4)`,
@@ -79,17 +79,24 @@ async function storeWeeklyInsight({ userId, summary, weekStart, weekEnd }) {
   )
 }
 
+async function markUserWarned(userId) {
+  console.log('⚠️ Updating warned_at timestamp for user:', userId)
+    await pool.query(
+      'UPDATE brightmind_users SET warned_at = CURRENT_TIMESTAMP WHERE id = $1',
+      [userId]
+  )
+}
+  
+  
+
 module.exports = {
   getOrCreateUser,
   updateUserBalance,
   updateLastPromptSent,
-  markUserWarned,
   createEntry,
   logGPTUsage,
   recordZap,
   storeWeeklyInsight,
-  pool // export raw pool for custom queries elsewhere
+  markUserWarned,
+  pool
 }
-
-
-

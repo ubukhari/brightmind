@@ -28,28 +28,30 @@ const aliases = {
 
 async function routeToModule({ message, user }) {
   const cmd = message.trim().toLowerCase()
+  console.log(`🧭 Routing message: "${cmd}"`)
 
-  // Direct command
+  // Command match
   if (aliases[cmd]) {
     const moduleKey = aliases[cmd]
+    console.log(`🔁 Matched command alias: ${cmd} → ${moduleKey}`)
     return modules[moduleKey].handle(user)
   }
 
-  // Fuzzy matching
-  if (cmd.includes('grateful') || cmd.includes('thank')) return modules.gratitude.handle(user, message)
-  if (cmd.includes('goal') || cmd.includes('do today')) return modules.zorrocircle.handle(user, message)
-  if (cmd.includes('stress') || cmd.includes('reframe')) return modules.reframe.handle(user, message)
-  if (cmd.includes('challenge') || cmd.includes('failure')) return modules.falling_up.handle(user, message)
-  if (cmd.includes('happy') || cmd.includes('log')) return modules.happiness_log.handle(user, message)
-  if (cmd.includes('friction') || cmd.includes('blocker')) return modules.friction.handle(user, message)
-  if (cmd.includes('connect') || cmd.includes('people')) return modules.social.handle(user, message)
+  // Pattern match (basic fallback)
+  if (cmd.includes('grateful') || cmd.includes('thank')) {
+    console.log(`🧠 Inferred module: gratitude`)
+    return modules.gratitude.handle(user, message)
+  }
 
+  if (cmd.includes('goal') || cmd.includes('do today')) {
+    console.log(`🧠 Inferred module: zorrocircle`)
+    return modules.zorrocircle.handle(user, message)
+  }
+
+  console.log(`🧐 No module matched. Sending default help reply.`)
   return `🧘 I'm here for your reflections. Try sending '/gratitude' or '/goal' to get started.`
 }
 
 module.exports = {
   routeToModule
 }
-
-
-

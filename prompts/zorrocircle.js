@@ -7,14 +7,17 @@ const DEFAULT_PROMPT = "What's one small, manageable goal you want to accomplish
 const TEMPLATE = "The user wrote this goal: {input}. Help them refine it into a very small, specific, achievable micro-goal. Offer brief encouragement too."
 
 async function handle(user, message = null) {
-  const trimmed = message?.trim().toLowerCase()
-  if (!message || trimmed === '/goal' || trimmed === '/zorrocircle') {
+  const cleaned = message ? message.trim().toLowerCase() : ''
+  if (!message || cleaned === '/goal' || cleaned === '/zorrocircle') {
+    console.log(`📨 Sending default Zorro Circle prompt to user ${user.id}`)
     return DEFAULT_PROMPT
   }
 
-  const response = message.trim().slice(0, 1000)
+  const response = message.trim()
   const prompt = DEFAULT_PROMPT
   let aiResponse = null
+
+  console.log(`🎯 Zorro goal input from user ${user.id}:`, response)
 
   const reflection = await getReflection({
     user,
@@ -24,9 +27,11 @@ async function handle(user, message = null) {
   })
 
   if (reflection.error === 'insufficient_balance') {
+    console.warn(`⚠️ Not enough sats for user ${user.id} on zorrocircle module.`)
     aiResponse = null
   } else {
     aiResponse = reflection.aiText
+    console.log(`🤖 Zorro Circle AI output:`, aiResponse)
   }
 
   await createEntry({
@@ -41,11 +46,8 @@ async function handle(user, message = null) {
   await updateLastPromptSent(user.id)
 
   return aiResponse
-    ? `🎯 Here’s your micro-goal refinement:\n\n${aiResponse}`
+    ? `🎯 Here’s your micro-goal refinement:\n${aiResponse}`
     : `✅ Got it. Keep it small and doable. Zap ⚡ for coaching next time.`
 }
 
 module.exports = { handle }
-
-
-

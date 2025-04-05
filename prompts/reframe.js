@@ -8,12 +8,15 @@ const TEMPLATE = "The user described this frustration: {input}. Offer 2–3 new 
 
 async function handle(user, message = null) {
   if (!message || message.trim().toLowerCase() === '/reframe') {
+    console.log(`📨 Sending default reframe prompt to user ${user.id}`)
     return DEFAULT_PROMPT
   }
 
-  const response = message.trim().slice(0, 1000)
+  const response = message.trim()
   const prompt = DEFAULT_PROMPT
   let aiResponse = null
+
+  console.log(`😤 Reframe input from user ${user.id}:`, response)
 
   const reflection = await getReflection({
     user,
@@ -23,9 +26,11 @@ async function handle(user, message = null) {
   })
 
   if (reflection.error === 'insufficient_balance') {
+    console.warn(`⚠️ Not enough sats for user ${user.id} on reframe module.`)
     aiResponse = null
   } else {
     aiResponse = reflection.aiText
+    console.log(`🤖 Reframe response from GPT:`, aiResponse)
   }
 
   await createEntry({
@@ -40,11 +45,8 @@ async function handle(user, message = null) {
   await updateLastPromptSent(user.id)
 
   return aiResponse
-    ? `🧠 Here are some new ways to look at it:\n\n${aiResponse}`
+    ? `🧠 Here are some new ways to look at it:\n${aiResponse}`
     : `✅ Noted. Zap ⚡ to unlock reframing insights and patterns.`
 }
 
 module.exports = { handle }
-
-
-
