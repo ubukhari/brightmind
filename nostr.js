@@ -1,5 +1,11 @@
 const { getPublicKey, nip04, relayInit, getEventHash, nip19 } = require('nostr-tools')
-const { schnorr } = require('@noble/secp256k1')
+
+// Dynamic ESM import workaround
+let schnorr
+(async () => {
+  const noble = await import('@noble/secp256k1')
+  schnorr = noble.schnorr
+})()
 
 const RELAY_URLS = [
   'wss://relay.nostr.wine',
@@ -15,7 +21,6 @@ async function sendDM(toPubkey, message) {
   console.log(`✉️ Preparing to send DM to ${toPubkey}...`)
 
   try {
-    // Decode if it's an npub
     const decoded = nip19.decode(toPubkey)
     const hexPubkey = decoded.data
     console.log('🔓 Decoded pubkey to hex:', hexPubkey)
@@ -32,7 +37,11 @@ async function sendDM(toPubkey, message) {
     }
 
     event.id = getEventHash(event)
+
+    // Wait until schnorr is loaded
+    while (!schnorr) await new Promise((r) => setTimeout(r, 10))
     event.sig = await schnorr.sign(event.id, BOT_PRIVATE_KEY)
+
     console.log('✍️ Event signed. ID:', event.id)
 
     for (const url of RELAY_URLS) {
