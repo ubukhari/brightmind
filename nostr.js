@@ -1,5 +1,5 @@
-const { getPublicKey, nip04, relayInit } = require('nostr-tools')
-const { signEvent } = require('nostr-tools/pure') // ✅ Fixed import
+const { getPublicKey, nip04, relayInit, nip19 } = require('nostr-tools')
+const { signEvent } = require('nostr-tools/pure')
 
 const RELAY_URLS = [
   'wss://relay.nostr.wine',
@@ -13,15 +13,21 @@ console.log('🤖 Nostr bot public key:', BOT_PUBKEY)
 
 async function sendDM(toPubkey, message) {
   console.log(`✉️ Preparing to send DM to ${toPubkey}...`)
+
   try {
-    const encrypted = await nip04.encrypt(BOT_PRIVATE_KEY, toPubkey, message)
+    // Decode if it's an npub
+    const decoded = nip19.decode(toPubkey)
+    const hexPubkey = decoded.data
+    console.log('🔓 Decoded pubkey to hex:', hexPubkey)
+
+    const encrypted = await nip04.encrypt(BOT_PRIVATE_KEY, hexPubkey, message)
     console.log('🔐 Message encrypted.')
 
     const event = {
-      kind: 4, // Kind 4 = Encrypted DM
+      kind: 4,
       pubkey: BOT_PUBKEY,
       created_at: Math.floor(Date.now() / 1000),
-      tags: [['p', toPubkey]],
+      tags: [['p', hexPubkey]],
       content: encrypted
     }
 
