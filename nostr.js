@@ -8,8 +8,11 @@ let schnorr
 })()
 
 const RELAY_URLS = [
-  'wss://relay.nostr.wine',
+  'wss://relay.damus.io',
+  'wss://relay.primal.net',
   'wss://relay.snort.social',
+  'wss://relay.iris.to',
+  'wss://nos.lol',
   'wss://relay.nostr.band'
 ]
 
@@ -38,13 +41,13 @@ async function sendDM(toPubkey, message) {
 
     event.id = getEventHash(event)
 
-    // Wait until schnorr is ready
     while (!schnorr) await new Promise(r => setTimeout(r, 10))
     event.sig = await schnorr.sign(event.id, BOT_PRIVATE_KEY)
-
     console.log('✍️ Event signed. ID:', event.id)
 
-    for (const url of RELAY_URLS) {
+    console.log('🚀 Broadcasting to all relays...')
+
+    const publishPromises = RELAY_URLS.map(async (url) => {
       try {
         console.log(`📡 Connecting to relay: ${url}`)
         const relay = relayInit(url)
@@ -66,15 +69,20 @@ async function sendDM(toPubkey, message) {
             })
           }),
           new Promise((_, reject) =>
-            setTimeout(() => reject(new Error(`⏱️ Timeout publishing to ${url}`)), 3000)
+            setTimeout(() => reject(new Error(`⏱️ Timeout publishing to ${url}`)), 2500)
           )
         ])
 
         relay.close()
       } catch (err) {
-        console.error(`❌ Error publishing to relay ${url}:`, err.message)
+        console.error(`❌ Error with relay ${url}:`, err.message)
       }
-    }
+    })
+
+    await Promise.allSettled(publishPromises)
+
+    console.log('📬 DM broadcast complete.')
+
   } catch (err) {
     console.error('🚨 Failed to send DM:', err.message)
     throw err
