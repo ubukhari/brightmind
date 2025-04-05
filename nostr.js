@@ -1,5 +1,5 @@
-const { getPublicKey, nip04, relayInit, nip19 } = require('nostr-tools')
-const { signEvent } = require('nostr-tools/pure')
+const { getPublicKey, nip04, relayInit, getEventHash, nip19 } = require('nostr-tools')
+const { schnorr } = require('@noble/secp256k1')
 
 const RELAY_URLS = [
   'wss://relay.nostr.wine',
@@ -31,8 +31,9 @@ async function sendDM(toPubkey, message) {
       content: encrypted
     }
 
-    const signedEvent = await signEvent(event, BOT_PRIVATE_KEY)
-    console.log('✍️ Event signed. ID:', signedEvent.id)
+    event.id = getEventHash(event)
+    event.sig = await schnorr.sign(event.id, BOT_PRIVATE_KEY)
+    console.log('✍️ Event signed. ID:', event.id)
 
     for (const url of RELAY_URLS) {
       try {
@@ -44,7 +45,7 @@ async function sendDM(toPubkey, message) {
         relay.on('notice', msg => console.log(`📢 Relay notice from ${url}:`, msg))
 
         await new Promise((resolve, reject) => {
-          const pub = relay.publish(signedEvent)
+          const pub = relay.publish(event)
           pub.on('ok', () => {
             console.log(`✅ Message published to ${url}`)
             resolve()
