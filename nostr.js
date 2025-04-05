@@ -1,4 +1,5 @@
-const { getPublicKey, nip04, relayInit, signEvent } = require('nostr-tools')
+const { getPublicKey, nip04, relayInit } = require('nostr-tools')
+const { signEvent } = require('nostr-tools/pure') // ✅ Fixed import
 
 const RELAY_URLS = [
   'wss://relay.nostr.wine',
