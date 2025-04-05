@@ -1,6 +1,6 @@
 const { getPublicKey, nip04, relayInit, getEventHash, nip19 } = require('nostr-tools')
 
-// Dynamic ESM import workaround
+// Dynamic ESM import workaround for schnorr signing
 let schnorr
 ;(async () => {
   const noble = await import('@noble/secp256k1')
@@ -38,46 +38,42 @@ async function sendDM(toPubkey, message) {
 
     event.id = getEventHash(event)
 
-    // Wait until schnorr is loaded
+    // Wait until schnorr is ready
     while (!schnorr) await new Promise(r => setTimeout(r, 10))
     event.sig = await schnorr.sign(event.id, BOT_PRIVATE_KEY)
 
     console.log('✍️ Event signed. ID:', event.id)
 
-    const publishToRelay = async (url) => {
+    for (const url of RELAY_URLS) {
       try {
+        console.log(`📡 Connecting to relay: ${url}`)
         const relay = relayInit(url)
         await relay.connect()
 
         relay.on('error', () => console.warn(`⚠️ Relay error: ${url}`))
         relay.on('notice', msg => console.log(`📢 Relay notice from ${url}:`, msg))
 
-        await new Promise((resolve, reject) => {
-          const pub = relay.publish(event)
-          pub.on('ok', () => {
-            console.log(`✅ Message published to ${url}`)
-            resolve()
-          })
-          pub.on('failed', reason => {
-            console.error(`❌ Failed to publish to ${url}:`, reason)
-            reject(new Error(`Relay failed: ${reason}`))
-          })
-        })
+        await Promise.race([
+          new Promise((resolve, reject) => {
+            const pub = relay.publish(event)
+            pub.on('ok', () => {
+              console.log(`✅ Message published to ${url}`)
+              resolve()
+            })
+            pub.on('failed', reason => {
+              console.error(`❌ Failed to publish to ${url}:`, reason)
+              reject(new Error(`Relay failed: ${reason}`))
+            })
+          }),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error(`⏱️ Timeout publishing to ${url}`)), 3000)
+          )
+        ])
 
         relay.close()
       } catch (err) {
         console.error(`❌ Error publishing to relay ${url}:`, err.message)
-        throw err
       }
-    }
-
-    const results = await Promise.allSettled(RELAY_URLS.map(publishToRelay))
-
-    const successCount = results.filter(r => r.status === 'fulfilled').length
-    if (successCount === 0) {
-      throw new Error('❌ Failed to publish message to all relays.')
-    } else {
-      console.log(`🎉 Message sent successfully to ${successCount} relay(s).`)
     }
   } catch (err) {
     console.error('🚨 Failed to send DM:', err.message)
